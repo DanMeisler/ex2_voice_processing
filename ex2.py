@@ -4,6 +4,10 @@ import glob
 import os
 
 
+def normalize(arr: np.ndarray):
+    return arr / arr.max()
+
+
 class Distance(object):
     def __init__(self, a: np.ndarray, b: np.ndarray):
         self._a = a
@@ -55,7 +59,8 @@ class Distance(object):
 
 def load_mfcc(file_path):
     y, sr = librosa.load(file_path, sr=None)
-    return librosa.feature.mfcc(y=y, sr=sr)
+    norm_y = normalize(y)
+    return librosa.feature.mfcc(y=norm_y, sr=sr)
 
 
 def dirname_to_number(dirname: str):
