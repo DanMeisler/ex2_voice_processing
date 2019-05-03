@@ -4,16 +4,13 @@ import glob
 import os
 
 
-def normalize(matrix):
-    return matrix / matrix.max(axis=0)
-
-
 class Distance(object):
     def __init__(self, a: np.ndarray, b: np.ndarray):
         self._a = a
         self._b = b
+
         # for euclidean_distance we must ensure a and b have the same shape
-        assert(self._a.shape == self._b.shape)
+        assert (self._a.shape == self._b.shape)
 
         self._distance_matrix_shape = (a.shape[1], b.shape[1])
         self._euclidean_distance_matrix = None
@@ -58,28 +55,56 @@ class Distance(object):
 
 def load_mfcc(file_path):
     y, sr = librosa.load(file_path, sr=None)
-    return normalize(librosa.feature.mfcc(y=y, sr=sr))
+    return librosa.feature.mfcc(y=y, sr=sr)
 
 
-def load_training_set(training_set_path):
-    training_set = []
+def dirname_to_number(dirname: str):
+    if dirname == "one":
+        return "1"
+    if dirname == "two":
+        return "2"
+    if dirname == "three":
+        return "3"
+    if dirname == "four":
+        return "4"
+    if dirname == "five":
+        return "5"
+
+
+def training_set(training_set_path):
     for train_file_path in glob.glob("%s/*/*.wav" % training_set_path):
-        training_set.append((load_mfcc(train_file_path), os.path.basename(os.path.dirname(train_file_path))))
-    return training_set
+        yield load_mfcc(train_file_path), dirname_to_number(os.path.basename(os.path.dirname(train_file_path)))
 
 
-def load_test_set(test_set_path):
-    test_set = []
+def test_set(test_set_path):
     for test_file_path in glob.glob("%s/*.wav" % test_set_path):
-        test_set.append(load_mfcc(test_file_path))
-    return test_set
+        yield load_mfcc(test_file_path), os.path.basename(test_file_path)
+
+
+def create_output_file(results):
+    with open("output.txt", "w") as f:
+        for result in results:
+            f.write(" - ".join(result) + "\n")
 
 
 def main():
-    first_test = load_test_set("test_set")[0]
-    for train_example, train_classification in load_training_set("training_set"):
-        distance = Distance(first_test, train_example)
-        print(distance.get_dtw_distance(), distance.get_euclidean_distance())
+    results = []
+    for test_example, test_file_path in test_set("test_set"):
+        minimal_euclidean_distance = (float("inf"), None)
+        minimal_dtw_distance = (float("inf"), None)
+
+        for train_example, train_classification in training_set("training_set"):
+            distance = Distance(test_example, train_example)
+            euclidean_distance = distance.get_euclidean_distance()
+            dtw_distance = distance.get_dtw_distance()
+            if euclidean_distance < minimal_euclidean_distance[0]:
+                minimal_euclidean_distance = (euclidean_distance, train_classification)
+            if dtw_distance < minimal_dtw_distance[0]:
+                minimal_dtw_distance = (dtw_distance, train_classification)
+
+        results.append((test_file_path, minimal_euclidean_distance[1], minimal_dtw_distance[1]))
+    print(results)
+    create_output_file(results)
 
 
 if __name__ == "__main__":
