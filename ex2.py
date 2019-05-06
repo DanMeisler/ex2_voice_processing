@@ -4,8 +4,11 @@ import glob
 import os
 
 
-def normalize(arr: np.ndarray):
-    return arr / arr.max()
+def normalize(v):
+    norm = np.linalg.norm(v)
+    if norm == 0:
+        return v
+    return v / norm
 
 
 class Distance(object):
@@ -45,10 +48,9 @@ class Distance(object):
         # rest of the matrix
         for i in range(1, self._distance_matrix_shape[0]):
             for j in range(1, self._distance_matrix_shape[1]):
-                choices = self._dtw_distance_matrix[i - 1, j - 1], \
-                          self._dtw_distance_matrix[i, j - 1], \
-                          self._dtw_distance_matrix[i - 1, j]
-                self._dtw_distance_matrix[i, j] = min(choices) + self._euclidean_distance_matrix[i, j]
+                self._dtw_distance_matrix[i, j] = \
+                    min(self._dtw_distance_matrix[i - 1, j - 1], self._dtw_distance_matrix[i, j - 1],
+                        self._dtw_distance_matrix[i - 1, j]) + self._euclidean_distance_matrix[i, j]
 
     def _construct_euclidean_distance_matrix(self):
         self._euclidean_distance_matrix = np.zeros(self._distance_matrix_shape)
