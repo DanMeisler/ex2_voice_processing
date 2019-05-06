@@ -17,7 +17,7 @@ class Distance(object):
         self._b = b
 
         # for euclidean_distance we must ensure a and b have the same shape
-        assert (self._a.shape == self._b.shape)
+        assert (self._a.shape == self._b.shape), "matrix must have same shape!"
 
         self._distance_matrix_shape = (a.shape[1], b.shape[1])
         self._euclidean_distance_matrix = None
@@ -65,25 +65,13 @@ def load_mfcc(file_path):
     return librosa.feature.mfcc(y=norm_y, sr=sr)
 
 
-def dirname_to_number(dirname: str):
-    if dirname == "one":
-        return "1"
-    if dirname == "two":
-        return "2"
-    if dirname == "three":
-        return "3"
-    if dirname == "four":
-        return "4"
-    if dirname == "five":
-        return "5"
-
-
-def training_set(training_set_path):
+def training_set_iter(training_set_path):
+    dirname_number_dict = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5"}
     for train_file_path in glob.glob("%s/*/*.wav" % training_set_path):
-        yield load_mfcc(train_file_path), dirname_to_number(os.path.basename(os.path.dirname(train_file_path)))
+        yield load_mfcc(train_file_path), dirname_number_dict[os.path.basename(os.path.dirname(train_file_path))]
 
 
-def test_set(test_set_path):
+def test_set_iter(test_set_path):
     for test_file_path in glob.glob("%s/*.wav" % test_set_path):
         yield load_mfcc(test_file_path), os.path.basename(test_file_path)
 
@@ -96,11 +84,11 @@ def create_output_file(results):
 
 def main():
     results = []
-    for test_example, test_file_path in test_set("test_set"):
+    for test_example, test_file_path in test_set_iter("test_set"):
         minimal_euclidean_distance = (float("inf"), None)
         minimal_dtw_distance = (float("inf"), None)
 
-        for train_example, train_classification in training_set("training_set"):
+        for train_example, train_classification in training_set_iter("training_set"):
             distance = Distance(test_example, train_example)
             euclidean_distance = distance.get_euclidean_distance()
             dtw_distance = distance.get_dtw_distance()
@@ -110,7 +98,6 @@ def main():
                 minimal_dtw_distance = (dtw_distance, train_classification)
 
         results.append((test_file_path, minimal_euclidean_distance[1], minimal_dtw_distance[1]))
-    print(results)
     create_output_file(results)
 
 
